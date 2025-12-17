@@ -65,7 +65,7 @@ static TimerHandle_t xTimer = NULL;
 /*-----------------------------------------------------------*/
 
 
-#define TICK_PERIOD 5000
+#define TICK_PERIOD 5
 
 struct enc_str
 {
