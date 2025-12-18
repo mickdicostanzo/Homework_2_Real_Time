@@ -39,10 +39,10 @@
 
 #define configUSE_PREEMPTION                       1
 #define configUSE_PORT_OPTIMISED_TASK_SELECTION    0
-#define configUSE_IDLE_HOOK                        1
-#define configUSE_TICK_HOOK                        1
-#define configUSE_DAEMON_TASK_STARTUP_HOOK         1
-#define configTICK_RATE_HZ                         ( 2000 )                  /* In this non-real time simulated environment the tick frequency has to be at least a multiple of the Win32 tick frequency, and therefore very slow. */
+#define configUSE_IDLE_HOOK                        0
+#define configUSE_TICK_HOOK                        0
+#define configUSE_DAEMON_TASK_STARTUP_HOOK         0
+#define configTICK_RATE_HZ                         ( 4000 )                  /* In this non-real time simulated environment the tick frequency has to be at least a multiple of the Win32 tick frequency, and therefore very slow. */
 #define configMINIMAL_STACK_SIZE                   ( ( unsigned short ) 70 ) /* In this simulated case, the stack only has to hold one small structure as the real stack is part of the win32 thread. */
 #define configTOTAL_HEAP_SIZE                      ( ( size_t ) ( 65 * 1024 ) )
 #define configMAX_TASK_NAME_LEN                    ( 12 )
@@ -58,7 +58,7 @@
 #define configUSE_ALTERNATIVE_API                  0
 #define configUSE_QUEUE_SETS                       1
 #define configUSE_TASK_NOTIFICATIONS               1
-#define configSUPPORT_STATIC_ALLOCATION            1
+#define configSUPPORT_STATIC_ALLOCATION            0
 
 /* Software timer related configuration options.  The maximum possible task
  * priority is configMAX_PRIORITIES - 1.  The priority of the timer task is
@@ -74,7 +74,7 @@
 /* Run time stats gathering configuration options. */
 unsigned long ulGetRunTimeCounterValue( void ); /* Prototype of function that returns run time counter. */
 void vConfigureTimerForRunTimeStats( void );    /* Prototype of function that initialises the run time counter. */
-#define configGENERATE_RUN_TIME_STATS             1
+#define configGENERATE_RUN_TIME_STATS             0
 
 /* Co-routine related configuration options. */
 #define configUSE_CO_ROUTINES                     0
@@ -148,12 +148,12 @@ extern void vAssertCalled( const char * const pcFileName,
  * configASSERT() when performing code coverage tests though, as it is not
  * intended to asserts() to fail, some some code is intended not to run if no
  * errors are present. */
-    #define configASSERT( x )    if( ( x ) == 0 ) vAssertCalled( __FILE__, __LINE__ )
+   #define configASSERT( x )       ((void)0)
 
-    #define configUSE_MALLOC_FAILED_HOOK    1
+    #define configUSE_MALLOC_FAILED_HOOK    0
 
 /* Include the FreeRTOS+Trace FreeRTOS trace macro definitions. */
-#include "trcRecorder.h"
+//#include "trcRecorder.h"
 #endif /* if ( projCOVERAGE_TEST == 1 ) */
 
 /* networking definitions */
