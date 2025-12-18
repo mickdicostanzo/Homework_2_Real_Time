@@ -15,12 +15,18 @@ Inserire priorità
 
 /* Kernel includes. */
 #include "FreeRTOS.h"
+#include <stdlib.h>
 #include "task.h"
 #include "timers.h"
 #include "semphr.h"
 
 /* Local includes. */
 #include "console.h"
+
+#define mainENCODER_TASK_PRIORITY        ( tskIDLE_PRIORITY + 3 )
+#define mainRT_TASK_PRIORITY             ( tskIDLE_PRIORITY + 4 )
+#define mainDIAGNOSTIC_TASK_PRIORITY     ( tskIDLE_PRIORITY + 1 )
+#define mainSCOPE_TASK_PRIORITY          ( tskIDLE_PRIORITY)
 
 /* Priorities at which the tasks are created. */
 #define mainQUEUE_RECEIVE_TASK_PRIORITY    ( tskIDLE_PRIORITY + 2 )
@@ -40,6 +46,8 @@ Inserire priorità
 #define mainVALUE_SENT_FROM_TIMER          ( 200UL )
 
 /*-----------------------------------------------------------*/
+
+
 
 /*
  * The tasks as described in the comments at the top of this file.
@@ -76,14 +84,14 @@ static struct enc_str enc_data;
 struct _cound_time_str{
 	unsigned int count;
 	unsigned long int time_diff;
-	xSemaphoreHandle mutex
+	xSemaphoreHandle mutex;
 };
 static struct _cound_time_str count_time_data;
 
 struct _slack_str{
 	unsigned long int slack_time_task1;
 	unsigned long int slack_time_task2;
-	xSemaphoreHandle mutex
+	xSemaphoreHandle mutex;
 };
 static struct _slack_str slack_data;
 
@@ -120,13 +128,13 @@ void rt_task1(void* PvParameters){
 		//DA VERIFICARE
 
 		finish_time = xTaskGetTickCount();
-		if(finish_time <= xNextWakeTime + xPeriod){
+		if(finish_time <= xNextWakeTime){
 			xSemaphoreTake( slack_data.mutex, portMAX_DELAY );
 			slack_data.slack_time_task1 = (unsigned long int)( ( ( xNextWakeTime + xPeriod ) - finish_time ) * portTICK_PERIOD_MS)*1000; 
 			xSemaphoreGive( slack_data.mutex );
 		}
 		else{
-			printf("DEADLINE MISS TASK1\n");
+			printf("DEADLINE MISS TASK1 finish time: %ld s\n",finish_time);
 		}
 	}
 }
@@ -160,7 +168,8 @@ void rt_task2(void* PvParameters){
 				time_home = xTaskGetTickCount();
 
 				xSemaphoreTake( count_time_data.mutex, portMAX_DELAY );
-				count_time_data.time_diff = (unsigned long int)( ( time_home - last_time_home ) * portTICK_PERIOD_MS ) * 1000000;
+				//count_time_data.time_diff = (unsigned long int)( ( time_home - last_time_home ) * portTICK_PERIOD_MS ) * 1000000;
+				count_time_data.time_diff = (unsigned long)( ((uint64_t)(time_home - last_time_home) * 1000000UL) / configTICK_RATE_HZ );
 				xSemaphoreGive( count_time_data.mutex );
 
 				last_time_home = time_home;
@@ -177,13 +186,14 @@ void rt_task2(void* PvParameters){
 		//DA VERIFICARE
 
 		finish_time = xTaskGetTickCount();
-		if(finish_time <= xNextWakeTime + xPeriod){
+		if(finish_time <= xNextWakeTime){
 			xSemaphoreTake( slack_data.mutex, portMAX_DELAY );
-			slack_data.slack_time_task2 = (unsigned long int)( ( ( xNextWakeTime + xPeriod ) - finish_time ) * portTICK_PERIOD_MS ) * 1000; //in microseconds
+			//slack_data.slack_time_task2 = (unsigned long int)( ( ( xNextWakeTime + xPeriod ) - finish_time ) * portTICK_PERIOD_MS ) * 1000; //in microseconds
+			slack_data.slack_time_task1 = (unsigned long)( ((uint64_t)(xNextWakeTime - xPeriod) * 1000000UL) / configTICK_RATE_HZ );
 			xSemaphoreGive( slack_data.mutex );
 		}
 		else{
-			printf("DEADLINE MISS TASK2\n");
+			printf("DEADLINE MISS TASK2 finish time: %ld s \n",finish_time);
 		}
 
 	}
@@ -204,7 +214,7 @@ void scope_task(void* PvParameters){
 
 		xSemaphoreTake( count_time_data.mutex, portMAX_DELAY );
 		count = count_time_data.count;
-		diff_us = count_time_data.time_diff/1000;			//difference in microseconds
+		diff_us = count_time_data.time_diff;			//difference in microseconds
 		xSemaphoreGive( count_time_data.mutex );
 
 		printf("Rising Edge Counter : %d\t",count);
@@ -285,7 +295,7 @@ void diagnostic(void* PvParameters){
 }
 
 /*** SEE THE COMMENTS AT THE TOP OF THIS FILE ***/
-void main_encoder( void )
+void main( void )
 {
 
 	enc_data.mutex = xSemaphoreCreateMutex();
@@ -293,49 +303,44 @@ void main_encoder( void )
 	slack_data.mutex = xSemaphoreCreateMutex();
 
 
-	xTaskCreate(    enc_task,                    /* The function that implements the task. */
-					"Encoder",                                   /* The text name assigned to the task - for debug only as it is not used by the kernel. */
-					configMINIMAL_STACK_SIZE,              /* The size of the stack to allocate to the task. */
-					NULL,                                  /* The parameter passed to the task - not used in this case. */
-					mainQUEUE_RECEIVE_TASK_PRIORITY,       /* The priority assigned to the task. */
-					NULL );                                /* The task handle is not required, so NULL is passed. */
+	xTaskCreate(    enc_task,                   
+					"Encoder",                                   
+					configMINIMAL_STACK_SIZE,             
+					NULL,                               
+					mainENCODER_TASK_PRIORITY,       
+					NULL );                               
 
-	xTaskCreate(    rt_task1,                    /* The function that implements the task. */
-					"RT_Task1",                                   /* The text name assigned to the task - for debug only as it is not used by the kernel. */
-					configMINIMAL_STACK_SIZE,              /* The size of the stack to allocate to the task. */
-					NULL,                                  /* The parameter passed to the task - not used in this case. */
-					mainQUEUE_SEND_TASK_PRIORITY,       /* The priority assigned to the task. */
+	xTaskCreate(    rt_task1,                   
+					"RT_Task1",                                   
+					configMINIMAL_STACK_SIZE,              
+					NULL,                                
+					mainRT_TASK_PRIORITY,      
 					NULL );   
 					
-	xTaskCreate(	rt_task2,                    /* The function that implements the task. */
-					"RT_Task2",                                   /* The text name assigned to the task - for debug only as it is not used by the kernel. */
-					configMINIMAL_STACK_SIZE,              /* The size of the stack to allocate to the task. */
-					NULL,                                  /* The parameter passed to the task - not used in this case. */
-					mainQUEUE_SEND_TASK_PRIORITY,       /* The priority assigned to the task. */
+	xTaskCreate(	rt_task2,                   
+					"RT_Task2",                            
+					configMINIMAL_STACK_SIZE,             
+					NULL,                                 
+					mainRT_TASK_PRIORITY,       
 					NULL );
 
-	xTaskCreate(    diagnostic,                    /* The function that implements the task. */
-					"Diagnostic",                                   /* The text name assigned to the task - for debug only as it is not used by the kernel. */
-					configMINIMAL_STACK_SIZE,              /* The size of the stack to allocate to the task. */
-					NULL,                                  /* The parameter passed to the task - not used in this case. */
-					mainQUEUE_SEND_TASK_PRIORITY,       /* The priority assigned to the task. */
+	xTaskCreate(    diagnostic,                   
+					"Diagnostic",                                  
+					configMINIMAL_STACK_SIZE,             
+					NULL,                                  
+					mainDIAGNOSTIC_TASK_PRIORITY ,      
 					NULL );	
 
-	xTaskCreate(    scope_task,                    /* The function that implements the task. */
-					"Buddy",                                   /* The text name assigned to the task - for debug only as it is not used by the kernel. */
-					configMINIMAL_STACK_SIZE,              /* The size of the stack to allocate to the task. */
-					NULL,                                  /* The parameter passed to the task - not used in this case. */
-					mainQUEUE_SEND_TASK_PRIORITY,       /* The priority assigned to the task. */
+	xTaskCreate(    scope_task,                    
+					"Buddy",                                   
+					configMINIMAL_STACK_SIZE,             
+					NULL,                                 
+					mainSCOPE_TASK_PRIORITY,      
 					NULL );
 
-	/* Start the scheduler so the created tasks start executing. */
 	vTaskStartScheduler();
 
-	/* If all is well, the scheduler will now be running, and the following
-	line will never be reached.  If the following line does execute, then
-	there was insufficient FreeRTOS heap memory available for the idle and/or
-	timer tasks to be created.  See the memory management section on the
-	FreeRTOS web site for more details. */
+	
 	for( ;; ){
 		if (getchar() == 'q') break;
 	};
