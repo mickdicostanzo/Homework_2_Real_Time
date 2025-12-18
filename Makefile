@@ -17,95 +17,54 @@ INCLUDE_DIRS          += -I${KERNEL_DIR}/include
 INCLUDE_DIRS          += -I${KERNEL_DIR}/portable/ThirdParty/GCC/Posix
 INCLUDE_DIRS          += -I${KERNEL_DIR}/portable/ThirdParty/GCC/Posix/utils
 INCLUDE_DIRS          += -I${FREERTOS_DIR}/Demo/Common/include
-INCLUDE_DIRS          += -I${FREERTOS_PLUS_DIR}/Source/FreeRTOS-Plus-Trace/Include
 
-SOURCE_FILES          := $(wildcard *.c)
+# --------------------------------------------------------
+# LOGICA DI SELEZIONE DEMO
+# --------------------------------------------------------
+
+# Default: se non scrivi nulla, usa ENCODER_DEMO
+USER_DEMO ?= ENCODER_DEMO
+
+ifeq ($(USER_DEMO),ENCODER_DEMO)
+    # Se scrivi make USER_DEMO=ENCODER_DEMO
+    USER_SRC := main_encoder.c
+else ifeq ($(USER_DEMO),BLINKY_DEMO)
+    # Esempio: se un domani vuoi usare blinky
+    USER_SRC := main_blinky.c
+else
+    # Se scrivi un nome sbagliato, errore
+    $(error Demo non riconosciuta! Usa make USER_DEMO=ENCODER_DEMO)
+endif
+
+# --------------------------------------------------------
+# SOURCE FILES
+# --------------------------------------------------------
+
+# 1. Il file selezionato sopra
+SOURCE_FILES          := $(USER_SRC)
+
+# 2. Kernel e Porting
 SOURCE_FILES          += $(wildcard ${FREERTOS_DIR}/Source/*.c)
-# Memory manager (use malloc() / free() )
 SOURCE_FILES          += ${KERNEL_DIR}/portable/MemMang/heap_3.c
-# posix port
 SOURCE_FILES          += ${KERNEL_DIR}/portable/ThirdParty/GCC/Posix/utils/wait_for_event.c
 SOURCE_FILES          += ${KERNEL_DIR}/portable/ThirdParty/GCC/Posix/port.c
 
-# Demo library.
-SOURCE_FILES          += ${FREERTOS_DIR}/Demo/Common/Minimal/AbortDelay.c
-SOURCE_FILES          += ${FREERTOS_DIR}/Demo/Common/Minimal/BlockQ.c
-SOURCE_FILES          += ${FREERTOS_DIR}/Demo/Common/Minimal/blocktim.c
-SOURCE_FILES          += ${FREERTOS_DIR}/Demo/Common/Minimal/countsem.c
-SOURCE_FILES          += ${FREERTOS_DIR}/Demo/Common/Minimal/death.c
-SOURCE_FILES          += ${FREERTOS_DIR}/Demo/Common/Minimal/dynamic.c
-SOURCE_FILES          += ${FREERTOS_DIR}/Demo/Common/Minimal/EventGroupsDemo.c
-SOURCE_FILES          += ${FREERTOS_DIR}/Demo/Common/Minimal/flop.c
-SOURCE_FILES          += ${FREERTOS_DIR}/Demo/Common/Minimal/GenQTest.c
-SOURCE_FILES          += ${FREERTOS_DIR}/Demo/Common/Minimal/integer.c
-SOURCE_FILES          += ${FREERTOS_DIR}/Demo/Common/Minimal/IntSemTest.c
-SOURCE_FILES          += ${FREERTOS_DIR}/Demo/Common/Minimal/MessageBufferAMP.c
-SOURCE_FILES          += ${FREERTOS_DIR}/Demo/Common/Minimal/MessageBufferDemo.c
-SOURCE_FILES          += ${FREERTOS_DIR}/Demo/Common/Minimal/PollQ.c
-SOURCE_FILES          += ${FREERTOS_DIR}/Demo/Common/Minimal/QPeek.c
-SOURCE_FILES          += ${FREERTOS_DIR}/Demo/Common/Minimal/QueueOverwrite.c
-SOURCE_FILES          += ${FREERTOS_DIR}/Demo/Common/Minimal/QueueSet.c
-SOURCE_FILES          += ${FREERTOS_DIR}/Demo/Common/Minimal/QueueSetPolling.c
-SOURCE_FILES          += ${FREERTOS_DIR}/Demo/Common/Minimal/recmutex.c
-SOURCE_FILES          += ${FREERTOS_DIR}/Demo/Common/Minimal/semtest.c
-SOURCE_FILES          += ${FREERTOS_DIR}/Demo/Common/Minimal/StaticAllocation.c
-SOURCE_FILES          += ${FREERTOS_DIR}/Demo/Common/Minimal/StreamBufferDemo.c
-SOURCE_FILES          += ${FREERTOS_DIR}/Demo/Common/Minimal/StreamBufferInterrupt.c
-SOURCE_FILES          += ${FREERTOS_DIR}/Demo/Common/Minimal/TaskNotify.c
-SOURCE_FILES          += ${FREERTOS_DIR}/Demo/Common/Minimal/TimerDemo.c
+# --------------------------------------------------------
+# FLAGS
+# --------------------------------------------------------
 
-
-
-CFLAGS                :=    -ggdb3
-LDFLAGS               :=    -ggdb3 -pthread
+CFLAGS                :=    -ggdb3 -O3 -pthread -Wall
+LDFLAGS               :=    -ggdb3 -pthread -O3
 CPPFLAGS              :=    $(INCLUDE_DIRS) -DBUILD_DIR=\"$(BUILD_DIR_ABS)\"
-CPPFLAGS              +=    -D_WINDOWS_
 
-ifeq ($(TRACE_ON_ENTER),1)
-  CPPFLAGS              += -DTRACE_ON_ENTER=1
-else
-  CPPFLAGS              += -DTRACE_ON_ENTER=0
-endif
+# IMPORTANTE: Trace disabilitato per evitare errori di linker
+CPPFLAGS              += -DTRACE_ON_ENTER=0 -DprojCOVERAGE_TEST=0
 
-ifeq ($(COVERAGE_TEST),1)
-  CPPFLAGS              += -DprojCOVERAGE_TEST=1
-else
-  CPPFLAGS              += -DprojCOVERAGE_TEST=0
-# Trace library.
-  SOURCE_FILES          += ${FREERTOS_PLUS_DIR}/Source/FreeRTOS-Plus-Trace/trcKernelPort.c
-  SOURCE_FILES          += ${FREERTOS_PLUS_DIR}/Source/FreeRTOS-Plus-Trace/trcSnapshotRecorder.c
-  SOURCE_FILES          += ${FREERTOS_PLUS_DIR}/Source/FreeRTOS-Plus-Trace/trcStreamingRecorder.c
-  SOURCE_FILES          += ${FREERTOS_PLUS_DIR}/Source/FreeRTOS-Plus-Trace/streamports/File/trcStreamingPort.c
-endif
-
-ifdef PROFILE
-  CFLAGS              +=   -pg  -O0
-  LDFLAGS             +=   -pg  -O0
-else
-  CFLAGS              +=   -O3
-  LDFLAGS             +=   -O3
-endif
-
-ifdef SANITIZE_ADDRESS
-  CFLAGS              +=   -fsanitize=address -fsanitize=alignment
-  LDFLAGS             +=   -fsanitize=address -fsanitize=alignment
-endif
-
-ifdef SANITIZE_LEAK
-  LDFLAGS             +=   -fsanitize=leak
-endif
-
-ifeq ($(USER_DEMO),ENCODER_DEMO)
-  CPPFLAGS            +=   -DUSER_DEMO=0
-endif
-
-ifeq ($(USER_DEMO),FULL_DEMO)
-  CPPFLAGS            +=   -DUSER_DEMO=1
-endif
-
+# --------------------------------------------------------
+# BUILD RULES (uguale a prima)
+# --------------------------------------------------------
 
 OBJ_FILES = $(SOURCE_FILES:%.c=$(BUILD_DIR)/%.o)
-
 DEP_FILE = $(OBJ_FILES:%.o=%.d)
 
 ${BIN} : $(BUILD_DIR)/$(BIN)
@@ -124,10 +83,3 @@ ${BUILD_DIR}/%.o : %.c Makefile
 
 clean:
 	-rm -rf $(BUILD_DIR)
-
-
-GPROF_OPTIONS := --directory-path=$(INCLUDE_DIRS)
-profile:
-	gprof -a -p --all-lines $(GPROF_OPTIONS) $(BUILD_DIR)/$(BIN) $(BUILD_DIR)/gmon.out > $(BUILD_DIR)/prof_flat.txt
-	gprof -a --graph $(GPROF_OPTIONS) $(BUILD_DIR)/$(BIN) $(BUILD_DIR)/gmon.out > $(BUILD_DIR)/prof_call_graph.txt
-
