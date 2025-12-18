@@ -153,7 +153,7 @@ extern void vAssertCalled( const char * const pcFileName,
     #define configUSE_MALLOC_FAILED_HOOK    1
 
 /* Include the FreeRTOS+Trace FreeRTOS trace macro definitions. */
-    #include "trcRecorder.h"
+#include "trcRecorder.h"
 #endif /* if ( projCOVERAGE_TEST == 1 ) */
 
 /* networking definitions */
