@@ -217,7 +217,8 @@ void scope_task(void* PvParameters){
 
 	unsigned int rpm = 0;
 	TickType_t diff_ticks;
-	TickType_t diff_us = 0;
+	//TickType_t diff_us = 0;
+	float diff_us =0;
 	unsigned int count = 0;
 
 	for(;;){
