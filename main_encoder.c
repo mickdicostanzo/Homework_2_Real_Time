@@ -132,8 +132,8 @@ void rt_task1(void* PvParameters){
 		if(finish_time <= xNextWakeTime){
 			xSemaphoreTake( slack_data.mutex, portMAX_DELAY );
 			//slack_data.slack_time_task1 = (unsigned long)( ( ( xNextWakeTime) - finish_time ) * portTICK_PERIOD_MS)*1000; 
-			slack_data.slack_time_task1=(xNextWakeTime -finish_time);
-			//slack_data.slack_time_task1= (unsigned long)( (((uint64_t)xNextWakeTime - (uint64_t)finish_time) * 1000000UL) / configTICK_RATE_HZ );
+			//slack_data.slack_time_task1=(xNextWakeTime -finish_time);
+			slack_data.slack_time_task1= (unsigned long)( (((uint64_t)xNextWakeTime - (uint64_t)finish_time) * 1000000UL) / configTICK_RATE_HZ );
 			xSemaphoreGive( slack_data.mutex );
 		}
 		else{
@@ -174,8 +174,8 @@ void rt_task2(void* PvParameters){
 
 				xSemaphoreTake( count_time_data.mutex, portMAX_DELAY );
 				//count_time_data.time_diff = (unsigned long int)( ( time_home - last_time_home ) * portTICK_PERIOD_MS ) * 1000000;
-				count_time_data.time_diff =time_home-last_time_home;
-				//count_time_data.time_diff =(unsigned long)( (((uint64_t)time_home- (uint64_t)last_time_home) * 1000000UL) / configTICK_RATE_HZ );
+				//count_time_data.time_diff =time_home-last_time_home;
+				count_time_data.time_diff =(unsigned long)( (((uint64_t)time_home- (uint64_t)last_time_home) * 1000000UL) / configTICK_RATE_HZ );
 				xSemaphoreGive( count_time_data.mutex );
 
 				last_time_home = time_home;
@@ -196,8 +196,8 @@ void rt_task2(void* PvParameters){
 		if(finish_time <= xNextWakeTime){
 			xSemaphoreTake( slack_data.mutex, portMAX_DELAY );
 			//slack_data.slack_time_task2 = (unsigned long int)( ( ( xNextWakeTime + xPeriod ) - finish_time ) * portTICK_PERIOD_MS ) * 1000; //in microseconds
-			slack_data.slack_time_task2= (xNextWakeTime - finish_time);
-			//slack_data.slack_time_task2= (unsigned long)( ((uint64_t)(xNextWakeTime - finish_time) * 1000000UL) / configTICK_RATE_HZ );
+			//slack_data.slack_time_task2= (xNextWakeTime - finish_time);
+			slack_data.slack_time_task2= (unsigned long)( ((uint64_t)(xNextWakeTime - finish_time) * 1000000UL) / configTICK_RATE_HZ );
 			printf("SLACK TIME TASK2: %ld us\n",slack_data.slack_time_task2);
 			xSemaphoreGive( slack_data.mutex );
 		}
@@ -283,7 +283,8 @@ void diagnostic(void* PvParameters){
 	const TickType_t xPeriod = pdMS_TO_TICKS( TICK_PERIOD*100 );
 	xNextWakeTime = xTaskGetTickCount();
 
-	TickType_t avg_slack=0;
+	//TickType_t avg_slack=0;
+	unsigned long int avg_slack;
 	int i = 0;
 	int rounds = 10;
 
@@ -292,7 +293,7 @@ void diagnostic(void* PvParameters){
 
 		xSemaphoreTake( slack_data.mutex, portMAX_DELAY );
 
-		avg_slack += (slack_data.slack_time_task1 + slack_data.slack_time_task2); 	//average in ticks
+		avg_slack += (slack_data.slack_time_task1 + slack_data.slack_time_task2)/2000; 	//average in ticks
 
 		xSemaphoreGive( slack_data.mutex );
 		i++;
